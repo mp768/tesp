@@ -18,7 +18,7 @@ const (
 
 type Function_Entry struct {
 	f_type      Function_Type
-	native_body func([]Value) (Value, ValueTypes)
+	native_body func(bool, []Value) (Value, ValueTypes)
 	body        Chunk
 	name        string
 	arity       uint
@@ -44,7 +44,7 @@ func (table *Function_Table) add_virtual_entry(name string, body Chunk, arity ui
 
 	table.functions = append(table.functions, Function_Entry{
 		FUNCTION_VIRTUAL,
-		func(v []Value) (Value, ValueTypes) { return Value{}, NO_VALUE },
+		func(b bool, v []Value) (Value, ValueTypes) { return Value{}, NO_VALUE },
 		body,
 		name,
 		arity,
@@ -52,7 +52,7 @@ func (table *Function_Table) add_virtual_entry(name string, body Chunk, arity ui
 	})
 }
 
-func (table *Function_Table) add_native_entry(name string, body func([]Value) (Value, ValueTypes), arity uint, return_type ValueTypes) {
+func (table *Function_Table) add_native_entry(name string, body func(bool, []Value) (Value, ValueTypes), arity uint, return_type ValueTypes) {
 	if table.check_if_already_exists(name) {
 		log.Panicf("Function '%s' already exists", name)
 	}
@@ -131,7 +131,7 @@ func (env *Environment) get_variable_value(name string) Value {
 
 func (env *Environment) remove_scope(scope_to_remove uint8) {
 	length := len(env.Entries)
-	deletion_index := 0
+	deletion_index := len(env.Entries)
 	for i := 0; i < length; i++ {
 		if env.Entries[i].scope == scope_to_remove {
 			deletion_index = i

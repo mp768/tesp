@@ -18,10 +18,12 @@ var env Environment
 // It will also be used as the base for the passes in the compiler, like the infer pass or optimization pass
 
 type VM struct {
-	chunk         *Chunk
-	index         uint32
-	stack         ValueArray
-	type_to_check byte
+	chunk                   *Chunk
+	index                   uint32
+	stack                   ValueArray
+	type_to_check           byte
+	evaluating              bool
+	function_starting_scope uint8
 }
 
 type InterpreterResult byte
@@ -40,12 +42,16 @@ func new_VM(chunk *Chunk) (result VM) {
 		0,
 		valueStack,
 		VM_TYPE_SCRIPT,
+		false,
+		0,
 	}
 	return
 }
 
 func (vm *VM) evaluate_operation() (result ValueTypes) {
+	vm.evaluating = true
 	interpret(vm)
+	vm.evaluating = false
 	env.remove_scope(env.currentScope)
 	env.currentScope--
 
@@ -55,28 +61,30 @@ func (vm *VM) evaluate_operation() (result ValueTypes) {
 	return
 }
 
-func evaluate_function(name string, values []Value) (result Value, returned_type ValueTypes) {
+func (vm *VM) evaluate_function(name string, values []Value) (result Value, returned_type ValueTypes) {
 	function := ftable.get_entry(name)
 
 	if function.f_type == FUNCTION_VIRTUAL {
 
-		vm := new_VM(&function.body)
-		vm.type_to_check = VM_TYPE_FUNCTION
+		new_vm := new_VM(&function.body)
+		new_vm.evaluating = vm.evaluating
+		new_vm.type_to_check = VM_TYPE_FUNCTION
+		new_vm.function_starting_scope = env.currentScope + 1
 		for _, v := range values {
-			write_ValueArray(&vm.stack, v)
+			write_ValueArray(&new_vm.stack, v)
 		}
-		interpret(&vm)
+		interpret(&new_vm)
 		if function.return_type != NO_VALUE {
-			result = pop_ValueArray(&vm.stack)
+			result = pop_ValueArray(&new_vm.stack)
 			returned_type = result.value_type
 		} else {
 			result = Value{}
 			returned_type = NO_VALUE
 		}
 
-		free_VM(&vm)
+		free_VM(&new_vm)
 	} else if function.f_type == FUNCTION_NATIVE {
-		result, returned_type = function.native_body(values)
+		result, returned_type = function.native_body(vm.evaluating, values)
 	}
 
 	return
@@ -175,10 +183,12 @@ func interpret(vm *VM) InterpreterResult {
 				values = append(values, pop_ValueArray(&vm.stack))
 			}
 
-			value, rtype := evaluate_function(name, values)
+			value, rtype := vm.evaluate_function(name, values)
 
 			if rtype != NO_VALUE {
 				write_ValueArray(&vm.stack, value)
+			} else {
+				write_ValueArray(&vm.stack, NO_VAL())
 			}
 
 		case OP_JMP:
@@ -429,19 +439,23 @@ func interpret(vm *VM) InterpreterResult {
 			write_ValueArray(&vm.stack, READ_CONSTANT())
 
 		case OP_PRINT:
-			print_Value(pop_ValueArray(&vm.stack))
+			if !vm.evaluating {
+				print_Value(pop_ValueArray(&vm.stack))
+			}
 
 		case OP_PRINTLN:
-			print_Value(pop_ValueArray(&vm.stack))
-			fmt.Println()
+			if !vm.evaluating {
+				print_Value(pop_ValueArray(&vm.stack))
+				fmt.Println()
+			}
 
 		case OP_RETURN:
 			if vm.type_to_check == VM_TYPE_SCRIPT {
 				fmt.Println("Cannot return in a script!")
 				return INTERPRETER_RESULT_INTERPET_ERROR
 			} else if vm.type_to_check == VM_TYPE_FUNCTION {
-				env.remove_scope(env.currentScope)
-				env.currentScope--
+				env.remove_scope(vm.function_starting_scope)
+				env.currentScope = vm.function_starting_scope - 1
 				return INTERPRETER_RESULT_OK
 			}
 

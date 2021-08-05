@@ -223,22 +223,25 @@ func (gen *CodeGen) lists() {
 			gen.expression()
 		}
 
+		gen.emit_byte(OP_START_SCOPE)
 		patch_area := gen.generate_patch_jmp(OP_IF_FALSE_JMP)
 		if gen.current.t_type != TOKEN_LEFT_PAREN {
-			gen.expression() // This should generate a boolean!
+			gen.expression()
 			gen.advance_g()
 		} else {
 			gen.expression()
 		}
+
 		else_patch_area := gen.generate_patch_jmp(OP_JMP)
 		gen.patch_jump(patch_area, uint32(len(gen.chunk.code)))
 		if gen.current.t_type != TOKEN_LEFT_PAREN {
-			gen.expression() // This should generate a boolean!
+			gen.expression()
 			gen.advance_g()
 		} else {
 			gen.expression()
 		}
 		gen.patch_jump(else_patch_area, uint32(len(gen.chunk.code)))
+		gen.emit_byte(OP_END_SCOPE)
 
 	case TOKEN_FUNC:
 		gen.advance_g()
@@ -344,6 +347,37 @@ func (gen *CodeGen) lists() {
 		for gen.current.t_type != TOKEN_RIGHT_PAREN {
 			gen.expression()
 		}
+
+	case TOKEN_WHILE:
+		gen.advance_g()
+		jmp_area := len(gen.chunk.code)
+		if gen.current.t_type != TOKEN_LEFT_PAREN {
+			gen.expression()
+			gen.advance_g()
+		} else {
+			gen.expression()
+		}
+
+		if jmp_area >= len(gen.chunk.code) {
+			log.Panicln("Expected an expression after 'while'")
+		}
+		condition_if := gen.generate_patch_jmp(OP_IF_FALSE_JMP)
+
+		gen.emit_byte(OP_START_SCOPE)
+		amount := len(gen.chunk.code)
+		if gen.current.t_type != TOKEN_LEFT_PAREN {
+			gen.expression()
+			gen.advance_g()
+		} else {
+			gen.expression()
+		}
+
+		if amount >= len(gen.chunk.code) {
+			log.Panicln("Expected expression body after condition.")
+		}
+		gen.emit_byte(OP_END_SCOPE)
+		gen.emit_jmp(OP_JMP, uint32(jmp_area))
+		gen.patch_jump(condition_if, uint32(len(gen.chunk.code)))
 	}
 
 	arguments := 0

@@ -60,6 +60,9 @@ func print_Value(value Value) {
 		fmt.Print(TO_UINT_S(&value))
 	case BOOL:
 		fmt.Print(TO_BOOL_S(&value))
+
+	case NO_VALUE:
+		fmt.Print("NO VAL")
 	}
 }
 

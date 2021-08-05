@@ -25,6 +25,7 @@ const (
 	TOKEN_OR
 	TOKEN_SWITCH
 	TOKEN_FOR
+	TOKEN_WHILE
 	TOKEN_BREAK
 	TOKEN_FUNC
 	TOKEN_RETURN
@@ -268,6 +269,8 @@ func identifer_Token() Token {
 		return make_Token(TOKEN_SWITCH)
 	case "for":
 		return make_Token(TOKEN_FOR)
+	case "while":
+		return make_Token(TOKEN_WHILE)
 	case "break":
 		return make_Token(TOKEN_BREAK)
 	case "func":

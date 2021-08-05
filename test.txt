@@ -42,9 +42,16 @@
 
 (if (> 5 4) 
     (println (+ 5 5)) 
-    (println (+ 7 8))
+    (println (+ 1 2))
 )
 
 // this is an example of using a native function, which can lead to faster calculations
 (println (fibonacci 32))
+//(println (fib 32)) // This is slow
 (new_print_int (add 6 7))
+(println (clock))
+
+(var kop 1)
+(while (< kop 5) 
+    ((println kop) (assign kop (+ kop 1)))
+)
