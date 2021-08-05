@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"strconv"
 )
 
 type ValueTypes byte
@@ -26,6 +27,8 @@ func ValueTypes_to_string(type_ ValueTypes) string {
 		return "decimal"
 	case BOOL:
 		return "boolean"
+	case STRING:
+		return "string"
 	case NO_VALUE:
 		return "no value"
 
@@ -37,6 +40,7 @@ func ValueTypes_to_string(type_ ValueTypes) string {
 type Value struct {
 	value_type ValueTypes
 	as         struct {
+		STR string
 		U64 uint64
 		I64 int64
 		F64 float64
@@ -47,9 +51,11 @@ type Value struct {
 func print_Value(value Value) {
 	switch value.value_type {
 	case DECIMAL:
-		fmt.Print(TO_DECIMAL_S(&value))
+		fmt.Printf("%g", TO_DECIMAL_S(&value))
 	case INT:
 		fmt.Print(TO_INT_S(&value))
+	case STRING:
+		fmt.Print(TO_STRING_S(&value))
 	case UINT:
 		fmt.Print(TO_UINT_S(&value))
 	case BOOL:
@@ -145,15 +151,60 @@ func TO_BOOL_S(value *Value) bool {
 	return false
 }
 
-func NO_VAL() Value {
+func TO_STRING_S(value *Value) string {
+	switch value.value_type {
+	case UINT:
+		return strconv.FormatUint(value.as.U64, 10)
+
+	case INT:
+		return strconv.FormatInt(value.as.I64, 10)
+
+	case DECIMAL:
+		return strconv.FormatFloat(value.as.F64, 'E', -1, 64)
+
+	case STRING:
+		return value.as.STR
+
+	case BOOL:
+		return strconv.FormatBool(value.as.B1)
+
+	default:
+		log.Panic("Cannot convert value to a string!")
+	}
+
+	return ""
+}
+
+func STRING_VAL(value string) Value {
 	return Value{
-		NO_VALUE,
+		STRING,
 		struct {
+			STR string
 			U64 uint64
 			I64 int64
 			F64 float64
 			B1  bool
 		}{
+			value,
+			0,
+			0,
+			0,
+			false,
+		},
+	}
+}
+
+func NO_VAL() Value {
+	return Value{
+		NO_VALUE,
+		struct {
+			STR string
+			U64 uint64
+			I64 int64
+			F64 float64
+			B1  bool
+		}{
+			"",
 			0,
 			0,
 			0,
@@ -166,11 +217,13 @@ func UINT_VAL(value uint64) Value {
 	return Value{
 		UINT,
 		struct {
+			STR string
 			U64 uint64
 			I64 int64
 			F64 float64
 			B1  bool
 		}{
+			"",
 			value,
 			0,
 			0,
@@ -183,11 +236,13 @@ func INT_VAL(value int64) Value {
 	return Value{
 		INT,
 		struct {
+			STR string
 			U64 uint64
 			I64 int64
 			F64 float64
 			B1  bool
 		}{
+			"",
 			0,
 			value,
 			0,
@@ -200,11 +255,13 @@ func BOOL_VAL(value bool) Value {
 	return Value{
 		BOOL,
 		struct {
+			STR string
 			U64 uint64
 			I64 int64
 			F64 float64
 			B1  bool
 		}{
+			"",
 			0,
 			0,
 			0,
@@ -217,11 +274,13 @@ func DECIMAL_VAL(value float64) Value {
 	return Value{
 		DECIMAL,
 		struct {
+			STR string
 			U64 uint64
 			I64 int64
 			F64 float64
 			B1  bool
 		}{
+			"",
 			0,
 			0,
 			value,

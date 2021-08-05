@@ -14,7 +14,9 @@ const (
 	TOKEN_ERROR
 
 	TOKEN_PRINT
+	TOKEN_PRINTLN
 	TOKEN_VAR
+	TOKEN_ASSIGN
 	TOKEN_TRUE
 	TOKEN_FALSE
 	TOKEN_IF
@@ -170,7 +172,6 @@ func skip_whitespace() {
 		switch c {
 		case ' ', '\r', '\t':
 			advance()
-			break
 
 		case '\n':
 			scanner.line++
@@ -247,6 +248,8 @@ func identifer_Token() Token {
 	switch string(scanner.chars[scanner.start:scanner.current]) {
 	case "print":
 		return make_Token(TOKEN_PRINT)
+	case "println":
+		return make_Token(TOKEN_PRINTLN)
 	case "var":
 		return make_Token(TOKEN_VAR)
 	case "true":
@@ -271,6 +274,9 @@ func identifer_Token() Token {
 		return make_Token(TOKEN_FUNC)
 	case "return":
 		return make_Token(TOKEN_RETURN)
+
+	case "assign":
+		return make_Token(TOKEN_ASSIGN)
 
 	case "int":
 		return make_Token(TOKEN_TYPE_INT)

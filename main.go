@@ -1,10 +1,5 @@
 package main
 
-import (
-	"fmt"
-	"os"
-)
-
 func actually_fibonacci(n int) int {
 	if n <= 1 {
 		return n
@@ -23,10 +18,8 @@ func fibonacci(values []Value) (Value, ValueTypes) {
 }
 
 func main() {
-	args := os.Args // Add [1:] when doing the thing, or just don't.
-	defer fmt.Println(args[0])
-
-	// GOAL: Convert c project to go for more flexibility for the language.
+	//args := os.Args // Add [1:] when doing the thing, or just don't.
+	//defer fmt.Println(args[0])
 
 	var chunko Chunk
 	chunko.init_chunk()
@@ -71,9 +64,9 @@ func main() {
 
 	ftable.add_native_entry("fibonacci", fibonacci, 1, INT)
 	chunk := gen.generate_chunk("./test.txt")
-	body := ftable.get_entry("fib").body
-	disassemble_chunk(&body, "ADD FUNC")
-	disassemble_chunk(&chunk, "GENERATED CHUNK")
+	//body := ftable.get_entry("add").body
+	//disassemble_chunk(&body, "ADD FUNC")
+	//disassemble_chunk(&chunk, "GENERATED CHUNK")
 
 	nvm := new_VM(&chunk)
 	defer free_VM(&nvm)

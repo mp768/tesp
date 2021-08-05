@@ -46,6 +46,8 @@ func new_VM(chunk *Chunk) (result VM) {
 
 func (vm *VM) evaluate_operation() (result ValueTypes) {
 	interpret(vm)
+	env.remove_scope(env.currentScope)
+	env.currentScope--
 
 	vm.index = 0
 	result = pop_ValueArray(&vm.stack).value_type
@@ -112,7 +114,7 @@ func interpret(vm *VM) InterpreterResult {
 
 	// I guess this is my only solution for debugging.
 	// ¯\_(ツ)_/¯
-	debugging := true
+	debugging := false
 	debug_entries := true
 	debug_values := true
 
@@ -145,6 +147,17 @@ func interpret(vm *VM) InterpreterResult {
 		case OP_END_SCOPE:
 			env.remove_scope(env.currentScope)
 			env.currentScope--
+
+		case OP_ASSIGN:
+			var bytes_of_name []byte
+			current_byte := READ_BYTE()
+			for i := 0; current_byte != OP_END_QUOTE; i++ {
+				bytes_of_name = append(bytes_of_name, current_byte)
+				current_byte = READ_BYTE()
+			}
+			name := string(bytes_of_name)
+
+			env.assign_to_entry(name, pop_ValueArray(&vm.stack))
 
 		case OP_CALL_FUNC:
 			var bytes_of_name []byte
@@ -319,6 +332,8 @@ func interpret(vm *VM) InterpreterResult {
 				write_ValueArray(&vm.stack, UINT_VAL(TO_UINT_S(&a)+TO_UINT_S(&b)))
 			case DECIMAL:
 				write_ValueArray(&vm.stack, DECIMAL_VAL(TO_DECIMAL_S(&a)+TO_DECIMAL_S(&b)))
+			case STRING:
+				write_ValueArray(&vm.stack, STRING_VAL(TO_STRING_S(&a)+TO_STRING_S(&b)))
 
 			default:
 				log.Panic("Cannot add these two binary operations!")
@@ -412,6 +427,13 @@ func interpret(vm *VM) InterpreterResult {
 
 		case OP_PUSH:
 			write_ValueArray(&vm.stack, READ_CONSTANT())
+
+		case OP_PRINT:
+			print_Value(pop_ValueArray(&vm.stack))
+
+		case OP_PRINTLN:
+			print_Value(pop_ValueArray(&vm.stack))
+			fmt.Println()
 
 		case OP_RETURN:
 			if vm.type_to_check == VM_TYPE_SCRIPT {

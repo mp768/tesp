@@ -99,6 +99,23 @@ func (env *Environment) add_entry(name string, vtype ValueTypes, value Value, sc
 	})
 }
 
+func (env *Environment) assign_to_entry(name string, value Value) {
+	for i := int16(env.currentScope); i >= 0; i-- {
+		for k, v := range env.Entries {
+			if v.scope == uint8(i) && v.name == name {
+				if v.value.value_type == value.value_type {
+					env.Entries[k].value = value
+				} else {
+					log.Panicf("Cannot assign value to '%s' as it's the wrong type.", name)
+				}
+				return
+			}
+		}
+	}
+
+	log.Panicf("Couldn't get a variable by the name of '%s'!", name)
+}
+
 func (env *Environment) get_variable_value(name string) Value {
 	for i := int16(env.currentScope); i >= 0; i-- {
 		for _, v := range env.Entries {

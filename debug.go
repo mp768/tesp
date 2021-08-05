@@ -92,8 +92,17 @@ func disassemble_instruction(chunk *Chunk, offset uint64) uint64 {
 	case OP_LOAD:
 		return store_instruction("OP_LOAD", true, chunk, offset)
 
+	case OP_ASSIGN:
+		return store_instruction("OP_ASSIGN", true, chunk, offset)
+
 	case OP_CALL_FUNC:
 		return store_instruction("OP_CALL_FUNC", true, chunk, offset)
+
+	case OP_PRINT:
+		return simple_instruction("OP_PRINT", offset)
+
+	case OP_PRINTLN:
+		return simple_instruction("OP_PRINTLN", offset)
 
 	case OP_NEGATE:
 		return simple_instruction("OP_NEGATE", offset)

@@ -3,8 +3,10 @@
 //(+ 2 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3)
 
 
+// This how you can define a variable
 (var h uint (+ 5 (+ 2 ( + 2 1))))
 (var j int 4)
+// You can also just avoid writing a type and the language can infer it.
 (var i (+ h 5.5))
 (var o 4.3)
 (var p int 4)
@@ -12,7 +14,18 @@
 (var r int 4)
 (var s int 1)
 
+// This is an example of assigning a new value
+(assign s 2)
+
+// This is an example of how to define a simple add function
 (func add [a int, b int] int (return (+ s a b)))
+
+// You can also have functions that do not return anything
+// P.S. I also plan to implement an 'any' type for dynamicness
+(func new_print_int [s int] (println s))
+
+// an implementation of 'fibonacci' in this language.
+// This implementation is slower, but it works at least.
 (func fib [n int] int ((if (<= n 1) 
         (return n)
         (return (+ (fib (- n 1)) (fib (- n 2))))
@@ -21,17 +34,17 @@
 
 (if (> 5 4) 
     (if (> h p) 
-        6 
-        8
+        (println 6) 
+        (println 8)
     ) 
-    7
+    (println 7)
 )
 
 (if (> 5 4) 
-    (+ 5 5) 
-    (+ 7 8)
+    (println (+ 5 5)) 
+    (println (+ 7 8))
 )
 
-(fibonacci 16)
-(fib 16)
-(add 6 7)
+// this is an example of using a native function, which can lead to faster calculations
+(println (fibonacci 32))
+(new_print_int (add 6 7))

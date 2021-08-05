@@ -86,6 +86,10 @@ func (gen *CodeGen) emit_load(name string) {
 	gen.chunk.write_load(OP_LOAD, name, uint32(gen.previous.line))
 }
 
+func (gen *CodeGen) emit_assign(name string) {
+	gen.chunk.write_load(OP_ASSIGN, name, uint32(gen.previous.line))
+}
+
 func (gen *CodeGen) emit_call_func(name string) {
 	gen.chunk.write_call_func(OP_CALL_FUNC, name, uint32(gen.previous.line))
 }
@@ -95,6 +99,14 @@ func (gen *CodeGen) literals() {
 }
 
 func (gen *CodeGen) compile_literal(literal Token) {
+	if literal.t_type == TOKEN_TRUE {
+		gen.emit_constant(BOOL_VAL(true))
+		return
+	} else if literal.t_type == TOKEN_FALSE {
+		gen.emit_constant(BOOL_VAL(false))
+		return
+	}
+
 	switch literal.t_type {
 	case TOKEN_UINT:
 		value, err := strconv.ParseUint(literal.lexeme, 10, 64)
@@ -116,6 +128,9 @@ func (gen *CodeGen) compile_literal(literal Token) {
 			log.Panicln("Failed to convert value to decimal")
 		}
 		gen.emit_constant(DECIMAL_VAL(value))
+
+	case TOKEN_STRING:
+		gen.emit_constant(STRING_VAL(literal.lexeme))
 	}
 }
 
@@ -141,6 +156,19 @@ func (gen *CodeGen) lists() {
 	first_token := gen.current
 
 	switch first_token.t_type {
+	case TOKEN_ASSIGN:
+		gen.advance_g()
+		name := gen.current.lexeme
+		gen.consume(TOKEN_IDENTIFER, "Expected an identifer after 'assign'")
+
+		amount := len(gen.chunk.code)
+		gen.expression()
+		if !(amount <= len(gen.chunk.code)) {
+			log.Panicf("Expected an expression after '%s'", name)
+		}
+
+		gen.emit_assign(name)
+
 	case TOKEN_VAR:
 		gen.advance_g()
 		name := gen.current.lexeme
@@ -262,21 +290,15 @@ func (gen *CodeGen) lists() {
 		gen.chunk.init_chunk()
 		gen.emit_byte(OP_START_SCOPE)
 		amount := len(gen.chunk.code)
-		fmt.Println("AMOUNT:", amount)
-		calculated_arugment_amount := 0
+
+		calculated_argument_amount := 0
 		for i, v := range function_args {
-			calculated_arugment_amount += len(v) + 3
+			calculated_argument_amount += len(v) + 3
 			gen.chunk.write_store(OP_STORE, v, function_types[i], uint32(gen.previous.line))
 		}
-		fmt.Println("CHUNK AMOUNT:", len(gen.chunk.code)-calculated_arugment_amount)
 		gen.expression()
 
-		/////////////////////////////
-		// FIX INFERRING
-		///////////////////////////
-		if amount < len(gen.chunk.code)-calculated_arugment_amount {
-			fmt.Println(amount < len(gen.chunk.code)-calculated_arugment_amount)
-			fmt.Println("RUNNING")
+		if amount < len(gen.chunk.code)-calculated_argument_amount {
 			gen.emit_byte(OP_END_SCOPE)
 			body_chunk := gen.chunk
 			gen.chunk = gen_chunk
@@ -345,6 +367,12 @@ func (gen *CodeGen) lists() {
 	//fmt.Println("TYPE:", first_token.t_type)
 
 	switch first_token.t_type {
+	case TOKEN_PRINT:
+		gen.emit_byte(OP_PRINT)
+
+	case TOKEN_PRINTLN:
+		gen.emit_byte(OP_PRINTLN)
+
 	case TOKEN_PLUS:
 		for i := 0; i < arguments-2; i++ {
 			gen.emit_byte(OP_ADD)
@@ -414,7 +442,7 @@ func (gen *CodeGen) expression() {
 	switch gen.current.t_type {
 	case TOKEN_IDENTIFER:
 		gen.identifer_g()
-	case TOKEN_UINT, TOKEN_INT, TOKEN_BOOL, TOKEN_DECIMAL, TOKEN_STRING:
+	case TOKEN_UINT, TOKEN_INT, TOKEN_FALSE, TOKEN_TRUE, TOKEN_DECIMAL, TOKEN_STRING:
 		gen.literals()
 	case TOKEN_LEFT_PAREN:
 		gen.lists()
@@ -425,9 +453,11 @@ func (gen *CodeGen) generate_chunk(file_path string) Chunk {
 	new_Scanner(file_path)
 
 	gen.advance_g()
+	gen.emit_byte(OP_START_SCOPE)
 	for gen.current.t_type != TOKEN_EOF {
 		gen.expression()
 	}
+	gen.emit_byte(OP_END_SCOPE)
 
 	gen.consume(TOKEN_EOF, "Expected end of expression.")
 
