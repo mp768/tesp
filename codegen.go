@@ -289,8 +289,9 @@ func (gen *CodeGen) lists() {
 
 		gen.consume(TOKEN_RIGHT_BRACKET, "Expected ']' after function arguments.")
 		literal_type := gen.current.t_type
-		gen_chunk := gen.chunk
-		gen.chunk.init_chunk()
+
+		var skip_over_function = gen.generate_patch_jmp(OP_JMP)
+		var function_position = len(gen.chunk.code)
 		gen.emit_byte(OP_START_SCOPE)
 		amount := len(gen.chunk.code)
 
@@ -302,22 +303,18 @@ func (gen *CodeGen) lists() {
 		gen.expression()
 
 		if amount < len(gen.chunk.code)-calculated_argument_amount {
+			gen.emit_byte(OP_RETURN)
 			gen.emit_byte(OP_END_SCOPE)
-			body_chunk := gen.chunk
-			gen.chunk = gen_chunk
-			gen_chunk.free_chunk()
+			gen.patch_jump(skip_over_function, uint32(len(gen.chunk.code)))
 
-			ftable.add_virtual_entry(name, body_chunk, uint(len(function_args)), NO_VALUE)
+			ftable.add_virtual_entry(name, uint(function_position), uint(len(function_args)), NO_VALUE)
 			break
 		}
 
 		gen.advance_g()
 		gen.expression()
 		gen.emit_byte(OP_END_SCOPE)
-
-		body_chunk := gen.chunk
-		gen.chunk = gen_chunk
-		gen_chunk.free_chunk()
+		gen.patch_jump(skip_over_function, uint32(len(gen.chunk.code)))
 
 		var value_type ValueTypes
 
@@ -341,7 +338,7 @@ func (gen *CodeGen) lists() {
 			gen.error_at_current("Expected a type to be specified")
 		}
 
-		ftable.add_virtual_entry(name, body_chunk, uint(len(function_args)), value_type)
+		ftable.add_virtual_entry(name, uint(function_position), uint(len(function_args)), value_type)
 
 	case TOKEN_LEFT_PAREN:
 		for gen.current.t_type != TOKEN_RIGHT_PAREN {

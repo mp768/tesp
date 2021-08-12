@@ -47,11 +47,11 @@
 
 // this is an example of using a native function, which can lead to faster calculations
 (println (fibonacci 32))
-//(println (fib 32)) // This is slow
-(new_print_int (add 6 7))
-(println (clock))
+(println (fib 32)) // This is slow
+(println (add 6 7))
+//(println (clock))
 
-(var kop 1)
+(var kop 0)
 (while (< kop 5) 
-    ((println kop) (assign kop (+ kop 1)))
+    ((assign kop (+ kop 1)) (println kop))
 )

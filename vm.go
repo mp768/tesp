@@ -23,7 +23,8 @@ type VM struct {
 	stack                   ValueArray
 	type_to_check           byte
 	evaluating              bool
-	function_starting_scope uint8
+	function_starting_scope []uint8
+	function_jump_back      []uint32
 }
 
 type InterpreterResult byte
@@ -43,7 +44,8 @@ func new_VM(chunk *Chunk) (result VM) {
 		valueStack,
 		VM_TYPE_SCRIPT,
 		false,
-		0,
+		[]uint8{},
+		[]uint32{},
 	}
 	return
 }
@@ -66,23 +68,22 @@ func (vm *VM) evaluate_function(name string, values []Value) (result Value, retu
 
 	if function.f_type == FUNCTION_VIRTUAL {
 
-		new_vm := new_VM(&function.body)
-		new_vm.evaluating = vm.evaluating
-		new_vm.type_to_check = VM_TYPE_FUNCTION
-		new_vm.function_starting_scope = env.currentScope + 1
+		vm.type_to_check = VM_TYPE_FUNCTION
+		vm.function_starting_scope = append(vm.function_starting_scope, env.currentScope+1)
+		vm.function_jump_back = append(vm.function_jump_back, vm.index)
 		for _, v := range values {
-			write_ValueArray(&new_vm.stack, v)
+			write_ValueArray(&vm.stack, v)
 		}
-		interpret(&new_vm)
+		vm.index = uint32(function.position)
+		interpret(vm)
+
 		if function.return_type != NO_VALUE {
-			result = pop_ValueArray(&new_vm.stack)
+			result = pop_ValueArray(&vm.stack)
 			returned_type = result.value_type
 		} else {
 			result = Value{}
 			returned_type = NO_VALUE
 		}
-
-		free_VM(&new_vm)
 	} else if function.f_type == FUNCTION_NATIVE {
 		result, returned_type = function.native_body(vm.evaluating, values)
 	}
@@ -454,8 +455,19 @@ func interpret(vm *VM) InterpreterResult {
 				fmt.Println("Cannot return in a script!")
 				return INTERPRETER_RESULT_INTERPET_ERROR
 			} else if vm.type_to_check == VM_TYPE_FUNCTION {
-				env.remove_scope(vm.function_starting_scope)
-				env.currentScope = vm.function_starting_scope - 1
+
+				env.remove_scope(vm.function_starting_scope[len(vm.function_starting_scope)-1])
+				env.currentScope = vm.function_starting_scope[len(vm.function_starting_scope)-1] - 1
+
+				vm.index = vm.function_jump_back[len(vm.function_jump_back)-1]
+
+				vm.function_starting_scope = vm.function_starting_scope[0 : len(vm.function_starting_scope)-1]
+				vm.function_jump_back = vm.function_jump_back[0 : len(vm.function_jump_back)-1]
+
+				if len(vm.function_jump_back) == 0 {
+					vm.type_to_check = VM_TYPE_SCRIPT
+				}
+
 				return INTERPRETER_RESULT_OK
 			}
 

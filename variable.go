@@ -19,7 +19,7 @@ const (
 type Function_Entry struct {
 	f_type      Function_Type
 	native_body func(bool, []Value) (Value, ValueTypes)
-	body        Chunk
+	position    uint
 	name        string
 	arity       uint
 	return_type ValueTypes
@@ -37,7 +37,7 @@ func (table *Function_Table) check_if_already_exists(name string) bool {
 	return false
 }
 
-func (table *Function_Table) add_virtual_entry(name string, body Chunk, arity uint, return_type ValueTypes) {
+func (table *Function_Table) add_virtual_entry(name string, position uint, arity uint, return_type ValueTypes) {
 	if table.check_if_already_exists(name) {
 		log.Panicf("Function '%s' already exists", name)
 	}
@@ -45,7 +45,7 @@ func (table *Function_Table) add_virtual_entry(name string, body Chunk, arity ui
 	table.functions = append(table.functions, Function_Entry{
 		FUNCTION_VIRTUAL,
 		func(b bool, v []Value) (Value, ValueTypes) { return Value{}, NO_VALUE },
-		body,
+		position,
 		name,
 		arity,
 		return_type,
@@ -60,7 +60,7 @@ func (table *Function_Table) add_native_entry(name string, body func(bool, []Val
 	table.functions = append(table.functions, Function_Entry{
 		FUNCTION_NATIVE,
 		body,
-		Chunk{},
+		0,
 		name,
 		arity,
 		return_type,
